@@ -57,3 +57,23 @@ it('uses the PUBLIC_APP_URL override through appUrl', async () => {
   expect(doc.querySelector('header [data-trigger="topbar-login"]')?.getAttribute('href')).toBe('https://app.test/login');
   expect(doc.querySelector('header [data-trigger="topbar-signup"]')?.getAttribute('href')).toBe('https://app.test/signup');
 });
+
+describe.each([
+  ['/', Learner],
+  ['/enterprise', Enterprise],
+] as const)('PUBLIC_APP_URL override on %s', (_path, page) => {
+  it('changes every app href (top bar, side panel, Try it out)', async () => {
+    const before = await render(page);
+    const defaults = [...before.querySelectorAll('a[data-app-link]')].map((a) => a.getAttribute('href')!);
+    expect(defaults.length).toBeGreaterThanOrEqual(4);
+    expect(defaults.every((h) => h.startsWith('https://app.onolys.com/'))).toBe(true);
+
+    vi.stubEnv('PUBLIC_APP_URL', 'https://app.test/');
+    const after = await render(page);
+    const links = [...after.querySelectorAll('a[data-app-link]')];
+    expect(links.map((a) => a.getAttribute('href'))).toEqual(
+      defaults.map((h) => h.replace('https://app.onolys.com', 'https://app.test')),
+    );
+    expect(after.documentElement.innerHTML).not.toContain('app.onolys.com');
+  });
+});
