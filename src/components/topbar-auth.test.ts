@@ -63,6 +63,7 @@ describe.each([
   ['/enterprise', Enterprise],
 ] as const)('PUBLIC_APP_URL override on %s', (_path, page) => {
   it('changes every app href (top bar, side panel, Try it out)', async () => {
+    vi.stubEnv('PUBLIC_APP_URL', '');
     const before = await render(page);
     const defaults = [...before.querySelectorAll('a[data-app-link]')].map((a) => a.getAttribute('href')!);
     expect(defaults.length).toBeGreaterThanOrEqual(4);
