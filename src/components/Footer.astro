@@ -12,12 +12,17 @@ const { page } = Astro.props;
       <li>Use it to practice and prepare</li>
       <li>Role-play or de-identified transcripts only</li>
     </ul>
-    <p>
-      <a href="https://app.onolys.com/privacy">Privacy</a> · <a href="https://app.onolys.com/terms">Terms</a> · <a href="mailto:tejitpabari99@gmail.com">Contact</a>{' · '}
-      {page === 'enterprise'
-        ? <a href="/" data-footer-switch>Individuals</a>
-        : <a href="/enterprise" data-footer-switch>Enterprise</a>}{' · '}© 2026 Onolys
-    </p>
+    <ul data-inline-list>
+      <li><a href="https://app.onolys.com/privacy">Privacy</a></li>
+      <li><a href="https://app.onolys.com/terms">Terms</a></li>
+      <li><a href="mailto:tejitpabari99@gmail.com">Contact</a></li>
+      <li>
+        {page === 'enterprise'
+          ? <a href="/" data-footer-switch>Individuals</a>
+          : <a href="/enterprise" data-footer-switch>Enterprise</a>}
+      </li>
+      <li>© 2026 Onolys</li>
+    </ul>
   </div>
 </footer>
 
@@ -28,5 +33,4 @@ const { page } = Astro.props;
   ul { margin: 0; padding: 0; list-style: none; }
   li { display: inline; }
   li + li::before { content: ' · '; white-space: pre; color: #9fcfc8; }
-  p { margin: 0; }
 </style>

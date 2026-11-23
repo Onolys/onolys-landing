@@ -144,9 +144,11 @@ test('team cards align bios and LinkedIn icons at 1440px', async ({ page }) => {
     expect([w, h]).toEqual([104, 104]);
     expect(nat).toBeGreaterThanOrEqual(208);
   }
-  // footer list is one line on desktop
-  const items = await page.locator('footer li').evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
-  expect(new Set(items).size).toBe(1);
+  // each footer list is one line on desktop
+  for (const list of await page.locator('footer ul').all()) {
+    const tops = await list.locator('li').evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
+    expect(new Set(tops).size).toBe(1);
+  }
 });
 
 test('390px: no horizontal scroll, compare tabs switch, compact team cards', async ({ page }) => {

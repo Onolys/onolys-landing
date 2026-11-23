@@ -58,16 +58,23 @@ it.each([
   expect(footer.textContent).not.toContain('Note:');
   expect(footer.textContent).not.toContain('Questions?');
   expect(footer.textContent).not.toContain('All rights reserved');
-  expect(footer.querySelectorAll('ul')).toHaveLength(1);
-  expect(footer.querySelector('ul')?.hasAttribute('data-inline-list')).toBe(true);
-  expect(Array.from(footer.querySelectorAll('li'), (li) => li.textContent)).toEqual([
+  const lists = Array.from(footer.querySelectorAll('ul'));
+  expect(lists).toHaveLength(2);
+  expect(lists.every((ul) => ul.hasAttribute('data-inline-list'))).toBe(true);
+  expect(footer.querySelectorAll('p')).toHaveLength(0);
+  expect(Array.from(lists[0].querySelectorAll('li'), (li) => li.textContent?.trim())).toEqual([
     'Not official MITI coding',
     'Use it to practice and prepare',
     'Role-play or de-identified transcripts only',
   ]);
-  const line2 = footer.querySelector('p')!;
-  expect(footer.querySelectorAll('p')).toHaveLength(1);
-  expect(line2.textContent?.replace(/\s+/g, ' ').trim()).toBe(`Privacy · Terms · Contact · ${label} · © 2026 Onolys`);
+  const line2 = lists[1];
+  expect(Array.from(line2.querySelectorAll('li'), (li) => li.textContent?.trim())).toEqual([
+    'Privacy',
+    'Terms',
+    'Contact',
+    label,
+    '© 2026 Onolys',
+  ]);
   expect(Array.from(line2.querySelectorAll('a'), (a) => a.getAttribute('href'))).toEqual([
     'https://app.onolys.com/privacy',
     'https://app.onolys.com/terms',
