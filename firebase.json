@@ -6,6 +6,7 @@
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "cleanUrls": true,
       "trailingSlash": false,
+      "redirects": [{ "source": "/sample{,/}", "destination": "https://app.onolys.com/sample", "type": 301 }],
       "headers": [
         {
           "source": "**",
