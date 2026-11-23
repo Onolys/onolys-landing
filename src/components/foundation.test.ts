@@ -49,26 +49,37 @@ it('loads GA asynchronously and configures the supplied ID', async () => {
 });
 
 it.each([
-  ['learner', 'Enterprise?', '/enterprise', "Click here — bulk evaluations and quality control for your team's MITI coding."],
-  ['enterprise', 'Individuals?', '/', 'Click here — evaluate your own MI session with evidence for every score.'],
-] as const)('renders the note, page switch, contact and copyright footer (%s)', async (page, lead, href, rest) => {
+  ['learner', 'Enterprise', '/enterprise'],
+  ['enterprise', 'Individuals', '/'],
+] as const)('renders the compact two-line footer (%s)', async (page, label, href) => {
   const doc = await render(Footer, { page });
-  expect(doc.querySelector('footer h3')).toBeNull();
-  expect(doc.querySelector('footer')?.textContent).not.toContain('Note:');
-  expect(doc.querySelectorAll('footer ul')).toHaveLength(1);
-  expect(doc.querySelector('footer ul')?.hasAttribute('data-inline-list')).toBe(true);
-  expect(Array.from(doc.querySelectorAll('footer li'), (li) => li.textContent)).toEqual([
-    'Not official MITI coding and cannot be submitted as one.',
-    'Use it to practice and prepare.',
-    'Role-play or de-identified transcripts only.',
+  const footer = doc.querySelector('footer')!;
+  expect(footer.querySelector('h3')).toBeNull();
+  expect(footer.textContent).not.toContain('Note:');
+  expect(footer.textContent).not.toContain('Questions?');
+  expect(footer.textContent).not.toContain('All rights reserved');
+  expect(footer.querySelectorAll('ul')).toHaveLength(1);
+  expect(footer.querySelector('ul')?.hasAttribute('data-inline-list')).toBe(true);
+  expect(Array.from(footer.querySelectorAll('li'), (li) => li.textContent)).toEqual([
+    'Not official MITI coding',
+    'Use it to practice and prepare',
+    'Role-play or de-identified transcripts only',
   ]);
-  const switchLine = doc.querySelector('[data-footer-switch]')!;
-  expect(switchLine.textContent).toBe(`${lead} ${rest}`);
-  expect(switchLine.querySelector('a')?.getAttribute('href')).toBe(href);
-  const paragraphs = Array.from(doc.querySelectorAll('footer p'), (p) => p.textContent?.trim());
-  expect(paragraphs).toContain('Questions? Reach out to tejitpabari99@gmail.com');
-  expect(doc.querySelector('a[href="mailto:tejitpabari99@gmail.com"]')).not.toBeNull();
-  expect(doc.querySelector('footer .copy')?.textContent).toBe('© 2026 Onolys. All rights reserved.');
+  const line2 = footer.querySelector('p')!;
+  expect(footer.querySelectorAll('p')).toHaveLength(1);
+  expect(line2.textContent?.replace(/\s+/g, ' ').trim()).toBe(`Privacy · Terms · Contact · ${label} · © 2026 Onolys`);
+  expect(Array.from(line2.querySelectorAll('a'), (a) => a.getAttribute('href'))).toEqual([
+    'https://app.onolys.com/privacy',
+    'https://app.onolys.com/terms',
+    'mailto:tejitpabari99@gmail.com',
+    href,
+  ]);
+  const sw = footer.querySelector('[data-footer-switch]')!;
+  expect(sw.tagName).toBe('A');
+  expect(sw.getAttribute('href')).toBe(href);
+  expect(sw.textContent).toBe(label);
+  expect(footer.querySelectorAll(`a[href="${href}"]`)).toHaveLength(1);
+  expect(footer.querySelector('[style]')).toBeNull();
 });
 
 it('gives adjacent sections different tones on both pages', async () => {

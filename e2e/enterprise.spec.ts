@@ -49,6 +49,8 @@ test('enterprise sections, exact copy, comparison and trailing CTAs are complete
   ]);
   expect(await main.evaluate((element) => element.lastElementChild?.id)).toBe('team');
   expect(await main.evaluate((element) => element.nextElementSibling?.tagName)).toBe('FOOTER');
+  await expect(page.locator('footer a[href="/"]')).toHaveText('Individuals');
+  await expect(page.locator('footer')).not.toContainText('Questions?');
   await expect(main).not.toContainText(/\$|accura|replace/i);
   await expect(page.locator('#features')).not.toContainText('Results in minutes, not the 1 to 2 weeks human coding takes.');
 

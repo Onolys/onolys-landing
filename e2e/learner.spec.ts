@@ -46,7 +46,12 @@ test('learner sections, approved copy, comparison and CTAs are complete', async 
   await expect(page.locator('#evaluates article').nth(2)).toContainText('Summary scores checked against MITI fair/good levels.');
   expect(await main.evaluate((element) => element.lastElementChild?.id)).toBe('team');
   expect(await main.evaluate((element) => element.nextElementSibling?.tagName)).toBe('FOOTER');
-  await expect(page.locator('footer')).toContainText('Not official MITI coding and cannot be submitted as one.');
+  await expect(page.locator('footer')).toContainText('Not official MITI coding');
+  await expect(page.locator('footer')).not.toContainText('cannot be submitted as one');
+  await expect(page.locator('footer')).not.toContainText('Questions?');
+  await expect(page.locator('footer a[href="https://app.onolys.com/privacy"]')).toHaveText('Privacy');
+  await expect(page.locator('footer a[href="https://app.onolys.com/terms"]')).toHaveText('Terms');
+  await expect(page.locator('footer a[href="/enterprise"]')).toHaveCount(1);
   await expect(page.locator('footer')).not.toContainText('Note:');
   for (const section of ['features', 'evaluates', 'compare']) {
     const cta = page.locator(`#${section} .cta-row > [data-open-popup]`);
