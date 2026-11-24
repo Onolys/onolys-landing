@@ -1,5 +1,5 @@
 ---
-import CtaButton from './CtaButton.astro';
+import TryItButton from './TryItButton.astro';
 interface Props {
   id: string;
   heading?: string;
@@ -12,7 +12,7 @@ const { id, heading, cta = true, tone = 'hero' } = Astro.props;
   <div class="container">
     {heading && <h2 id={`${id}-heading`}>{heading}</h2>}
     <slot />
-    {cta && <div class="cta-row"><CtaButton trigger={`section:${id}`} /></div>}
+    {cta && <div class="cta-row"><TryItButton trigger={`section:${id}`} /></div>}
   </div>
 </section>
 

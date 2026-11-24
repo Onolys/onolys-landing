@@ -2,6 +2,7 @@ import { experimental_AstroContainer as AstroContainer } from 'astro/container';
 import { JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
 import Learner from '../pages/index.astro';
+import { appUrl } from '../lib/app-url';
 
 async function render() {
   const container = await AstroContainer.create();
@@ -18,8 +19,6 @@ describe('learner landing page', () => {
     expect(main.querySelector('#hero')?.textContent).toContain('A full MITI 4.2.1 evaluation of your transcript: global ratings, behavior counts, summary scores and feedback, each linked to the exact lines.');
     expect(main.querySelector('#hero')?.textContent).not.toMatch(/not official MITI coding/i);
     expect(main.querySelector('.hero-limits')).toBeNull();
-    expect(main.querySelectorAll('#hero [data-hero-signup]')).toHaveLength(1);
-    expect(main.querySelectorAll('[data-hero-signup]')).toHaveLength(1);
     expect(main.nextElementSibling?.tagName).toBe('FOOTER');
     expect(main.lastElementChild?.id).toBe('team');
   });
@@ -27,10 +26,18 @@ describe('learner landing page', () => {
   it('provides every section CTA, all three feature panels, and the exact turnaround line', async () => {
     const doc = await render();
     for (const id of ['features', 'evaluates', 'compare']) {
-      expect(doc.querySelectorAll(`#${id} [data-open-popup]`)).toHaveLength(1);
-      expect(doc.querySelector(`#${id} .cta-row > [data-open-popup]`)?.getAttribute('data-trigger')).toBe(`section:${id}`);
+      expect(doc.querySelectorAll(`#${id} [data-app-link]`)).toHaveLength(1);
+      const cta = doc.querySelector(`#${id} .cta-row > a[data-app-link]`)!;
+      expect(cta.textContent?.trim()).toBe('Try it out');
+      expect(cta.getAttribute('href')).toBe(appUrl('/signup'));
+      expect(cta.getAttribute('data-trigger')).toBe(`section:${id}`);
     }
-    expect(doc.querySelector('#hero [data-open-popup]')).toBeNull();
+    const hero = doc.querySelectorAll('#hero a[data-trigger="hero"]');
+    expect(hero).toHaveLength(1);
+    expect(hero[0].textContent?.trim()).toBe('Try it out');
+    expect(hero[0].getAttribute('href')).toBe(appUrl('/signup'));
+    expect(doc.querySelector('[data-open-popup]')).toBeNull();
+    expect(doc.querySelector('[data-hero-signup]')).toBeNull();
     expect(doc.querySelector('#features h2')?.textContent).toBe('Features');
     expect(doc.querySelector('#features h2')?.classList.contains('visually-hidden')).toBe(true);
     expect(doc.querySelector('#features')?.textContent).toContain('Results in minutes, not the 1 to 2 weeks human coding takes.');

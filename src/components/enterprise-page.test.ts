@@ -2,6 +2,7 @@ import { experimental_AstroContainer as AstroContainer } from 'astro/container';
 import { JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
 import Enterprise from '../pages/enterprise.astro';
+import { appUrl } from '../lib/app-url';
 
 async function render() {
   const container = await AstroContainer.create();
@@ -18,9 +19,12 @@ describe('enterprise landing page', () => {
     expect(doc.querySelector('#hero')?.textContent).toContain("We read each coded sample against its transcript and flag the scores the session doesn't support, with line references.");
     expect(doc.querySelector('#hero')?.textContent).not.toMatch(/not official MITI coding/i);
     expect(doc.querySelector('.hero-limits')).toBeNull();
-    expect(doc.querySelectorAll('[data-hero-signup]')).toHaveLength(1);
-    expect(doc.querySelector('#hero [data-hero-signup]')).not.toBeNull();
-    expect(doc.querySelector('#hero [data-open-popup]')).toBeNull();
+    const hero = doc.querySelectorAll('#hero a[data-trigger="hero"]');
+    expect(hero).toHaveLength(1);
+    expect(hero[0].textContent?.trim()).toBe('Try it out');
+    expect(hero[0].getAttribute('href')).toBe(appUrl('/signup'));
+    expect(doc.querySelector('[data-open-popup]')).toBeNull();
+    expect(doc.querySelector('[data-hero-signup]')).toBeNull();
     expect(main.lastElementChild?.id).toBe('team');
     expect(main.nextElementSibling?.tagName).toBe('FOOTER');
   });
@@ -28,8 +32,11 @@ describe('enterprise landing page', () => {
   it('composes the enterprise feature tabs, comparison, and section CTAs', async () => {
     const doc = await render();
     for (const id of ['benefits', 'features', 'evaluates', 'compare']) {
-      expect(doc.querySelectorAll(`#${id} [data-open-popup]`)).toHaveLength(1);
-      expect(doc.querySelector(`#${id} .cta-row > [data-open-popup]`)?.getAttribute('data-trigger')).toBe(`section:${id}`);
+      expect(doc.querySelectorAll(`#${id} [data-app-link]`)).toHaveLength(1);
+      const cta = doc.querySelector(`#${id} .cta-row > a[data-app-link]`)!;
+      expect(cta.textContent?.trim()).toBe('Try it out');
+      expect(cta.getAttribute('href')).toBe(appUrl('/signup'));
+      expect(cta.getAttribute('data-trigger')).toBe(`section:${id}`);
     }
     expect(doc.querySelector('#benefits')?.querySelectorAll('article')).toHaveLength(3);
     const heading = doc.querySelector('#features h2')!;

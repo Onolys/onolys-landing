@@ -3,6 +3,7 @@ import { JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
 import Learner from '../pages/index.astro';
 import Enterprise from '../pages/enterprise.astro';
+import { appUrl } from '../lib/app-url';
 
 async function features(page: typeof Learner) {
   const container = await AstroContainer.create();
@@ -57,7 +58,10 @@ describe('learner features widget', () => {
       'Try a complex reflection after L18', 'Ask fewer closed questions', 'Affirm effort when they share a step',
     ]);
     expect(root.textContent).toContain('Results in minutes, not the 1 to 2 weeks human coding takes.');
-    expect(root.querySelectorAll('.cta-row > [data-open-popup]')).toHaveLength(1);
+    expect(root.querySelectorAll('.cta-row > a[data-app-link]')).toHaveLength(1);
+    expect(root.querySelector('.cta-row > a[data-app-link]')?.textContent?.trim()).toBe('Try it out');
+    expect(root.querySelector('.cta-row > a[data-app-link]')?.getAttribute('href')).toBe(appUrl('/signup'));
+    expect(root.querySelector('[data-open-popup]')).toBeNull();
   });
 });
 

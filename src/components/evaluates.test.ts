@@ -3,6 +3,7 @@ import { JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
 import { evaluates } from '../data/evaluates';
 import EvaluatesSection from './EvaluatesSection.astro';
+import { appUrl } from '../lib/app-url';
 
 const expectedCards = [
   { headline: 'Full MITI 4.2.1', line: '4 global ratings (1 to 5) and 10 behavior codes, not just counts.' },
@@ -31,9 +32,11 @@ describe('evaluation feature cards', () => {
       expect(card.querySelector('p')?.textContent).toBe(expectedCards[index].line);
     });
     expect(doc.querySelector('.evaluation-cards')).not.toBeNull();
-    expect(section.querySelectorAll('[data-open-popup]')).toHaveLength(1);
-    const cta = section.querySelector('[data-open-popup]')!;
-    expect(cta.textContent).toBe('Get early access');
+    expect(section.querySelectorAll('[data-app-link]')).toHaveLength(1);
+    const cta = section.querySelector('a[data-app-link]')!;
+    expect(cta.textContent?.trim()).toBe('Try it out');
+    expect(cta.getAttribute('href')).toBe(appUrl('/signup'));
+    expect(section.querySelector('[data-open-popup]')).toBeNull();
     expect(cta.getAttribute('data-trigger')).toBe('section:evaluates');
     expect(section.querySelector('.container')?.lastElementChild?.lastElementChild).toBe(cta);
   });

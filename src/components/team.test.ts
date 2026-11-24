@@ -3,6 +3,7 @@ import { JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
 import { team } from '../data/team';
 import TeamSection from './TeamSection.astro';
+import { appUrl } from '../lib/app-url';
 
 const expected = [
   { name: 'Tejit Pabari', lead: 'Engineer at Microsoft', rest: ', 8+ years building cloud systems and AI tooling @PowerBI. Columbia CS.', linkedin: 'https://www.linkedin.com/in/tejitpabari/' },
@@ -54,8 +55,12 @@ describe('team section', () => {
 
   it('renders one CTA and no Questions link', async () => {
     const doc = await render();
-    expect(doc.querySelectorAll('[data-open-popup]')).toHaveLength(1);
-    expect(doc.querySelector('[data-open-popup]')?.getAttribute('data-trigger')).toBe('team');
+    expect(doc.querySelectorAll('[data-app-link]')).toHaveLength(1);
+    const cta = doc.querySelector('a[data-app-link]')!;
+    expect(cta.textContent?.trim()).toBe('Try it out');
+    expect(cta.getAttribute('href')).toBe(appUrl('/signup'));
+    expect(cta.getAttribute('data-trigger')).toBe('team');
+    expect(doc.querySelector('[data-open-popup]')).toBeNull();
     expect(doc.querySelector('#team a[href^="mailto:"]')).toBeNull();
     expect(doc.querySelector('#team')?.textContent).not.toContain('Questions?');
   });

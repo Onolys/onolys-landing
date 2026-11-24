@@ -6,6 +6,7 @@ import CtaButton from './CtaButton.astro';
 import Section from './Section.astro';
 import Analytics from './Analytics.astro';
 import Footer from './Footer.astro';
+import { appUrl } from '../lib/app-url';
 import Learner from '../pages/index.astro';
 import Enterprise from '../pages/enterprise.astro';
 
@@ -168,6 +169,9 @@ it.each([
   expect(doc.querySelector('main')).not.toBeNull();
   expect(doc.querySelector('meta[name="description"]')?.getAttribute('content')).toBeTruthy();
   expect(doc.querySelector('meta[name="robots"]')?.getAttribute('content') ?? null).toBe(noindex ? 'noindex, nofollow' : null);
-  expect(doc.querySelector('header [data-open-popup]')?.getAttribute('data-trigger')).toBe('topbar');
+  expect(doc.querySelector('header [data-open-popup]')).toBeNull();
+  expect(Array.from(doc.querySelectorAll('header a[data-app-link]'), (a) => [a.textContent?.trim(), a.getAttribute('href')])).toEqual([
+    ['Log in', appUrl('/login')], ['Sign up', appUrl('/signup')],
+  ]);
   expect(doc.querySelector('footer')).not.toBeNull();
 });

@@ -34,6 +34,7 @@ it('runs validation before browser tests using public dummy configuration', () =
   expect(job.env).toMatchObject({
     PUBLIC_SIGNUP_URL: 'https://script.google.com/macros/s/TEST/exec',
     PUBLIC_GA_ID: 'G-TEST000000',
+    PUBLIC_APP_URL: 'https://app.test',
   });
   const commands = job.steps.filter((step: { run?: string }) => step.run).map((step: { run: string }) => step.run);
   expect(commands).toEqual([
@@ -54,6 +55,7 @@ it('deploys only after tests succeed on a push to main, using real repository va
     PUBLIC_SIGNUP_URL: '${{ vars.PUBLIC_SIGNUP_URL }}',
     PUBLIC_GA_ID: '${{ vars.PUBLIC_GA_ID }}',
     PUBLIC_SIGNUP_PLAN: '${{ vars.PUBLIC_SIGNUP_PLAN }}',
+    PUBLIC_APP_URL: '${{ vars.PUBLIC_APP_URL }}',
   });
   const commands = job.steps.filter((step: { run?: string }) => step.run).map((step: { run: string }) => step.run);
   expect(commands[0]).toBe('npm ci');

@@ -1,5 +1,5 @@
 ---
-import HeroForm from './HeroForm.astro';
+import TryItButton from './TryItButton.astro';
 import HeroVisual from './HeroVisual.astro';
 import Section from './Section.astro';
 interface Props {
@@ -13,7 +13,7 @@ const { title, description } = Astro.props;
     <div class="hero-content">
       <h1>{title}</h1>
       <p class="hero-description">{description}</p>
-      <div class="hero-form"><HeroForm /></div>
+      <div class="hero-cta"><TryItButton trigger="hero" /></div>
     </div>
     <HeroVisual />
   </div>
@@ -25,7 +25,7 @@ const { title, description } = Astro.props;
   .hero-content { min-width: 0; }
   h1 { margin: 0; max-width: 23ch; font-size: clamp(2rem, 5vw, var(--font-size-3xl)); line-height: var(--line-height-heading); letter-spacing: -0.025em; }
   .hero-description { max-width: 44rem; margin-block: var(--space-6) 0; color: var(--color-gray-600); font-size: var(--font-size-lg); }
-  .hero-form { max-width: 35rem; margin-top: var(--space-8); }
+  .hero-cta { margin-top: var(--space-8); }
   @media (max-width: 47.5rem) {
     :global(#hero) { padding-block: 3rem 2.5rem; }
     .hero { grid-template-columns: minmax(0, 1fr); gap: 1.25rem; }

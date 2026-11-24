@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { openPopup } from './open-popup';
 
 for (const [route, pageId] of [['/', 'learner'], ['/enterprise', 'enterprise']] as const) {
   test(`${pageId} shell, popup signal, analytics queue and mobile layout`, async ({ page, context }) => {
@@ -53,15 +54,17 @@ for (const [route, pageId] of [['/', 'learner'], ['/enterprise', 'enterprise']] 
       await expect(robots).toHaveCount(0);
     }
 
-    // The existing client module's stub is the readiness signal for delegated CTAs.
+    // The existing client module's stub is the readiness signal for the dialog's event handler.
     await page.waitForFunction(() => typeof window.gtag === 'function');
-    const popup = page.evaluate(() => new Promise((resolve) => {
-      document.addEventListener('miti:open-popup', (event) => {
-        resolve((event as CustomEvent).detail);
-      }, { once: true });
-    }));
-    await page.locator('header').getByRole('button', { name: 'Get early access' }).click();
-    expect(await popup).toEqual({ trigger: 'topbar', email: '' });
+    // Header CTAs are links to the app, not popup triggers.
+    await expect(page.locator('header [data-open-popup]')).toHaveCount(0);
+    await expect(page.locator('header a[data-trigger="topbar-signup"]')).toHaveText('Sign up');
+    await expect(page.locator('header a[data-trigger="topbar-signup"]')).toHaveAttribute('href', /\/signup$/);
+    await expect(page.locator('header a[data-trigger="topbar-login"]')).toHaveText('Log in');
+    // The kept dialog still answers the popup event.
+    await openPopup(page, 'smoke');
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
 
     // No application-only test hooks: exercise the actual standard gtag queue.
     const queued = await page.evaluate(() => {

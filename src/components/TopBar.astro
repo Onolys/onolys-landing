@@ -1,5 +1,5 @@
 ---
-import CtaButton from './CtaButton.astro';
+import { appUrl } from '../lib/app-url';
 import type { Page } from '../lib/context';
 interface Props {
   page: Page;
@@ -23,7 +23,10 @@ const links = [
       {links.map((link) => <a href={link.href}>{link.label}</a>)}
     </nav>
     <a class="secondary" href={secondary.href}>{secondary.label}</a>
-    <div class="cta"><CtaButton trigger="topbar" /></div>
+    <div class="auth">
+      <a class="login" href={appUrl('/login')} data-app-link data-trigger="topbar-login">Log in</a>
+      <a class="signup" href={appUrl('/signup')} data-app-link data-trigger="topbar-signup">Sign up</a>
+    </div>
   </div>
 </header>
 
@@ -32,6 +35,8 @@ const links = [
   <nav aria-label="Sections (mobile)">
     {links.map((link) => <a href={link.href}>{link.label}</a>)}
   </nav>
+  <hr class="panel-sep" />
+  <a class="panel-login" href={appUrl('/login')} data-app-link data-trigger="menu-login">Log in</a>
 </div>
 
 <script>
@@ -77,18 +82,24 @@ const links = [
   .bar { display: flex; align-items: center; gap: 1.25rem; min-height: var(--hdr); }
   .brand { color: var(--color-text); text-decoration: none; font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em; }
   nav { display: flex; flex: 1; justify-content: center; gap: 0.25rem; }
+  .auth { display: flex; align-items: center; gap: 0.5rem; }
+  .login { display: inline-flex; align-items: center; min-height: 44px; padding: 0 0.75rem; color: var(--color-gray-600); text-decoration: none; font-size: 0.92rem; font-weight: 500; white-space: nowrap; border-radius: 8px; }
+  .login:hover { color: var(--color-accent); background: var(--color-gray-50); }
+  .signup { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 1rem; border: 1px solid var(--color-accent); border-radius: var(--space-2); background: var(--color-accent); color: var(--color-on-accent); text-decoration: none; font-size: 0.875rem; font-weight: 600; white-space: nowrap; }
   nav a, .secondary { color: var(--color-gray-600); text-decoration: none; font-size: 0.92rem; font-weight: 500; padding: 0.4rem 0.75rem; border-radius: 8px; white-space: nowrap; }
   nav a:hover, .secondary:hover { color: var(--color-accent); background: var(--color-gray-50); }
   a:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
   .menu-toggle, .menu-panel, .menu-backdrop { display: none; }
-  .cta :global(button) { min-height: 38px; padding: 0.45rem 1rem; font-size: 0.875rem; white-space: nowrap; }
+  .panel-sep, .panel-login { display: none; }
 
   @media (max-width: 47.5rem) {
     .bar { gap: 0.5rem; }
     .brand { font-size: 1.05rem; }
     .brand + nav { display: none; }
     .secondary { margin-left: auto; padding: 0.4rem 0.35rem; font-size: 0.85rem; }
-    .cta :global(button) { padding: 0.45rem 0.8rem; font-size: 0.82rem; }
+    /* Measured: at 320px Log in does not fit (hamburger shrinks to 22px), so it lives in the panel. */
+    .login { display: none; }
+    .signup { padding: 0 0.7rem; font-size: 0.82rem; }
     .menu-toggle { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-left: -10px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--color-text); cursor: pointer; }
     .menu-toggle:hover { background: var(--color-gray-50); }
     .menu-toggle:focus-visible, .menu-panel:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
@@ -99,7 +110,8 @@ const links = [
     .menu-panel { display: block; position: fixed; top: 0; bottom: 0; left: 0; z-index: 40; width: min(18rem, 85vw); padding: calc(1rem + env(safe-area-inset-top, 0px)) 0.75rem 1rem; overflow-y: auto; background: var(--color-background); border-right: 1px solid var(--color-gray-100); box-shadow: 8px 0 24px rgba(11, 95, 90, 0.12); transform: translateX(-100%); visibility: hidden; transition: transform 0.2s ease, visibility 0.2s; }
     .menu-panel.open { transform: translateX(0); visibility: visible; transition: transform 0.2s ease, visibility 0s; }
     .menu-panel nav { display: flex; flex-direction: column; justify-content: flex-start; gap: 0.25rem; }
-    .menu-panel a { display: block; padding: 0.75rem 0.85rem; border-radius: 8px; color: var(--color-text); text-decoration: none; font-size: 1.05rem; font-weight: 500; }
+    .panel-sep { display: block; margin: 0.75rem 0.85rem; border: 0; border-top: 1px solid var(--color-gray-100); }
+    .menu-panel a { display: block; min-height: 44px; padding: 0.75rem 0.85rem; border-radius: 8px; color: var(--color-text); text-decoration: none; font-size: 1.05rem; font-weight: 500; }
     .menu-panel a:hover { color: var(--color-accent); background: var(--color-gray-50); }
   }
 </style>

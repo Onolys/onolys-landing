@@ -40,7 +40,8 @@ test('learner sections, approved copy, comparison and CTAs are complete', async 
   const main = page.locator('main');
   expect(await main.locator(':scope > section').evaluateAll((sections) => sections.map((section) => section.id))).toEqual(['hero', 'features', 'evaluates', 'compare', 'team']);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Get your MI session evaluated. See the evidence for every score.');
-  await expect(page.locator('#hero [data-hero-signup]')).toHaveCount(1);
+  await expect(page.locator('#hero [data-hero-signup]')).toHaveCount(0);
+  await expect(page.locator('#hero a[data-app-link][data-trigger="hero"]')).toHaveText('Try it out');
   await expect(page.locator('#features')).toContainText('Results in minutes, not the 1 to 2 weeks human coding takes.');
   await expect(page.locator('#evaluates article')).toHaveCount(6);
   await expect(page.locator('#evaluates article').nth(2)).toContainText('Summary scores checked against MITI fair/good levels.');
@@ -54,11 +55,11 @@ test('learner sections, approved copy, comparison and CTAs are complete', async 
   await expect(page.locator('footer a[href="/enterprise"]')).toHaveCount(1);
   await expect(page.locator('footer')).not.toContainText('Note:');
   for (const section of ['features', 'evaluates', 'compare']) {
-    const cta = page.locator(`#${section} .cta-row > [data-open-popup]`);
+    const cta = page.locator(`#${section} .cta-row > a[data-app-link]`);
     await expect(cta).toHaveAttribute('data-trigger', `section:${section}`);
-    await cta.click();
-    await expect(page.getByRole('dialog')).toBeVisible();
-    await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(cta).toHaveText('Try it out');
+    await expect(cta).toHaveAttribute('href', /\/signup$/);
+    await expect(page.locator(`#${section} [data-open-popup]`)).toHaveCount(0);
   }
 });
 

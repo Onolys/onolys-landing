@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { expect, test } from '@playwright/test';
+import { openPopup } from './open-popup';
 
 const signupHost = (url: URL) => url.hostname === 'script.google.com' || url.hostname === 'script.googleusercontent.com';
 
@@ -13,8 +14,7 @@ test.beforeEach(async ({ page }) => {
 for (const path of ['/', '/enterprise']) {
   test(`${path} dialog has labelled controls, visible focus, readable contrast and mobile targets`, async ({ page, isMobile }) => {
     await page.goto(path);
-    await page.waitForFunction(() => typeof window.gtag === 'function');
-    await page.locator('[data-trigger="topbar"]').click();
+    await openPopup(page, 'topbar');
     const dialog = page.getByRole('dialog');
     await expect(dialog).toHaveAccessibleName('Get early access');
     const labels = await dialog.locator('input:not([name="company_website"]),select,textarea').evaluateAll((controls) => controls.map((control) => {
@@ -102,9 +102,7 @@ test('success reopens fresh and the entire flow writes no browser storage or coo
   });
   await page.goto('/');
   await page.waitForFunction(() => typeof window.gtag === 'function');
-  const hero = page.locator('[data-hero-signup]');
-  await hero.getByRole('textbox', { name: 'Email' }).fill('person@example.com');
-  await hero.getByRole('button').click();
+  await openPopup(page, 'hero', { email: 'person@example.com' });
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('textbox', { name: 'Email' })).toHaveValue('person@example.com');
   await dialog.getByLabel('Anything else').fill('A private answer');
@@ -114,7 +112,7 @@ test('success reopens fresh and the entire flow writes no browser storage or coo
   await expect(success).toBeFocused();
   await expect(success).toHaveCSS('outline-width', '3px');
   await dialog.getByRole('button', { name: 'Close', exact: true }).click();
-  await page.locator('[data-trigger="topbar"]').click();
+  await openPopup(page, 'topbar');
   await expect(dialog.getByRole('textbox', { name: 'Email' })).toHaveValue('');
   await expect(dialog.getByLabel('Anything else')).toHaveValue('');
   await expect(dialog.getByLabel('Role', { exact: true })).toHaveValue('');
@@ -124,7 +122,7 @@ test('success reopens fresh and the entire flow writes no browser storage or coo
   expect(writes).toEqual([]);
 });
 
-test('unset signup URL and GA ID in development simulate both saves after 300ms without console errors', async ({ page }) => {
+test('unset signup URL and GA ID in development simulate the dialog save without console errors', async ({ page }) => {
   test.setTimeout(45_000);
   const server = spawn(process.execPath, ['node_modules/astro/bin/astro.mjs', 'dev', '--host', '127.0.0.1', '--port', '4333', '--ignore-lock'], {
     cwd: process.cwd(),
@@ -157,30 +155,19 @@ test('unset signup URL and GA ID in development simulate both saves after 300ms 
     await page.goto('http://127.0.0.1:4333/?src=dev-check');
     await page.waitForFunction(() => typeof window.gtag === 'function');
     expect(await page.locator('script[src*="googletagmanager"]').count()).toBe(0);
-    const hero = page.locator('[data-hero-signup]');
-    await hero.getByRole('textbox', { name: 'Email' }).fill('dev@example.com');
-    await page.evaluate(() => {
-      document.querySelector('[data-hero-signup]')!.addEventListener('submit', () => performance.mark('dev-signup-start'), { capture: true, once: true });
-      document.addEventListener('miti:open-popup', () => performance.measure('dev-signup-delay', 'dev-signup-start'), { once: true });
-    });
-    await hero.getByRole('button').click();
-    await expect(hero).toHaveAttribute('aria-busy', 'true');
+    await openPopup(page, 'hero', { email: 'dev@example.com' });
     await expect(page.getByRole('dialog')).toBeVisible();
-    const elapsed = await page.evaluate(() => performance.getEntriesByName('dev-signup-delay')[0].duration);
-    // The popup opens optimistically, before the simulated 300ms save resolves.
-    expect(elapsed).toBeLessThan(250);
     const dialog = page.getByRole('dialog');
     await dialog.getByRole('button', { name: 'Get early access', exact: true }).click();
     await expect(dialog.locator('form')).toHaveAttribute('aria-busy', 'true');
     await expect(dialog.getByRole('heading', { name: 'Thank you for signing up.' })).toBeVisible();
     expect(simulated).toEqual([
-      { step: 1, email: 'dev@example.com', page: 'learner', src: 'dev-check', honeypot: '' },
       { step: 2, email: 'dev@example.com', page: 'learner', src: 'dev-check', honeypot: '' },
     ]);
     expect(warnings.filter((message) => message.includes('PUBLIC_SIGNUP_URL is unset'))).toHaveLength(1);
     expect(errors).toEqual([]);
     expect(external).toEqual([]);
-    console.log(`Development simulation: two saves, first completed in ${Math.round(elapsed)}ms, one unset-URL warning, zero console errors or external requests.`);
+    console.log(`Development simulation: one save, one unset-URL warning, zero console errors or external requests.`);
   } finally {
     await page.goto('about:blank');
     if (server.exitCode === null) {

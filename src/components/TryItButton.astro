@@ -1,0 +1,29 @@
+---
+import { appUrl } from '../lib/app-url';
+interface Props {
+  trigger: string;
+}
+const { trigger } = Astro.props;
+---
+<a href={appUrl('/signup')} data-app-link data-trigger={trigger}>Try it out</a>
+
+<style>
+  a {
+    display: inline-block;
+    padding: var(--space-3) var(--space-6);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--space-2);
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+    font-weight: 600;
+    font-size: inherit;
+    line-height: normal;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  a:focus-visible {
+    outline: 3px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+</style>

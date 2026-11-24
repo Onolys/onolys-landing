@@ -38,10 +38,9 @@ it.each([
   expect(form.querySelector(`label[for="${honeypot.id}"]`)).toBeNull();
 });
 
-it.each([Learner, Enterprise])('places one temporary hero form before the Team section in each shell', async (component) => {
+it.each([Learner, Enterprise])('no longer mounts the hero form in either shell (replaced by Try it out)', async (component) => {
   const container = await AstroContainer.create();
   const document = new JSDOM(await container.renderToString(component)).window.document;
-  const forms = document.querySelectorAll('main [data-hero-signup]');
-  expect(forms).toHaveLength(1);
-  expect(forms[0].compareDocumentPosition(document.querySelector('#team')!) & 4).toBe(4);
+  expect(document.querySelector('main [data-hero-signup]')).toBeNull();
+  expect(document.querySelectorAll('#hero a[data-app-link][data-trigger="hero"]')).toHaveLength(1);
 });

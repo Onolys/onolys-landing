@@ -29,6 +29,20 @@ it.each([
   expect(() => validateEnv({ ...valid, PUBLIC_SIGNUP_URL: value })).toThrow('PUBLIC_SIGNUP_URL');
 });
 
+it.each([undefined, '', 'https://app.onolys.com', 'https://app.test:8443'])('accepts unset/empty/valid app URL: %s', (value) => {
+  expect(() => validateEnv({ ...valid, PUBLIC_APP_URL: value })).not.toThrow();
+});
+
+it.each([
+  'http://app.onolys.com',
+  'https://app.onolys.com/login',
+  'https://app.onolys.com/?x=1',
+  'garbage',
+  'https://user:pw@app.onolys.com',
+])('rejects malformed app URL: %s', (value) => {
+  expect(() => validateEnv({ ...valid, PUBLIC_APP_URL: value })).toThrow('PUBLIC_APP_URL');
+});
+
 it.each([undefined, '', 'G-', 'UA-12345', 'G-test', 'G-TEST/123'])('rejects missing/malformed GA ID: %s', (value) => {
   expect(() => validateEnv({ ...valid, PUBLIC_GA_ID: value })).toThrow('PUBLIC_GA_ID');
 });

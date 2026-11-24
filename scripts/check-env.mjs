@@ -15,6 +15,15 @@ export function validateEnv(env) {
   if (!/^G-[A-Z0-9]+$/.test(env.PUBLIC_GA_ID ?? '')) {
     errors.push('PUBLIC_GA_ID must be a GA4 measurement ID beginning with G-.');
   }
+  if (env.PUBLIC_APP_URL) {
+    try {
+      const url = new URL(env.PUBLIC_APP_URL);
+      const bare = url.pathname === '/' && !url.search && !url.hash && !env.PUBLIC_APP_URL.endsWith('?') && !env.PUBLIC_APP_URL.endsWith('#');
+      if (url.protocol !== 'https:' || url.username || url.password || !bare) throw new Error('Invalid origin');
+    } catch {
+      errors.push('PUBLIC_APP_URL must be an HTTPS origin without a path (or empty to use the default).');
+    }
+  }
   if (errors.length) throw new Error(errors.join('\n'));
 }
 

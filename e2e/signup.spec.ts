@@ -1,4 +1,5 @@
 import { expect, test as base, type Page } from '@playwright/test';
+import { openPopup } from './open-popup';
 
 type Payload = { step: number; email: string; page: string; src: string; honeypot: string; [key: string]: unknown };
 type Reply = { ok: boolean; error?: string };
@@ -29,7 +30,9 @@ const test = base.extend<{ backend: Backend }>({
 const dialog = (page: Page) => page.getByRole('dialog');
 const email = (page: Page) => dialog(page).getByRole('textbox', { name: 'Email', exact: true });
 const submit = (page: Page) => dialog(page).getByRole('button', { name: 'Get early access', exact: true });
-const topbar = (page: Page) => page.locator('[data-open-popup][data-trigger="topbar"]');
+// A visible, focusable link on every viewport that stands in for the former CTA as the dialog's invoker.
+const invoker = (page: Page) => page.locator('#team a[data-trigger="team"]');
+const openDialog = (page: Page, email = '') => openPopup(page, 'topbar', { email, from: invoker(page) });
 
 async function visit(page: Page, path = '/') {
   await page.goto(`${path}?src=signup-test`);
@@ -47,13 +50,9 @@ function deferredReply() {
   return { promise, resolve };
 }
 
-test('hero success saves both steps, preserves context, sends no PII to analytics and reopens fresh', async ({ page, context, backend }) => {
+test('prefilled popup saves step 2 with context, sends no PII to analytics and reopens fresh', async ({ page, context, backend }) => {
   await visit(page);
-  const hero = page.locator('[data-hero-signup]');
-  await hero.getByRole('textbox', { name: 'Email' }).fill('person@example.com');
-  await hero.getByRole('button').click();
-  await expect(hero.getByRole('status')).toHaveText('You have been signed up for early access.');
-  await expect(hero.getByRole('status')).toHaveCSS('background-color', 'rgb(229, 244, 236)');
+  await openPopup(page, 'hero', { email: 'person@example.com', from: invoker(page) });
   await expect(dialog(page)).toBeVisible();
   await expect(email(page)).toHaveValue('person@example.com');
   await expect(dialog(page).getByLabel('Role', { exact: true })).toBeFocused();
@@ -62,20 +61,15 @@ test('hero success saves both steps, preserves context, sends no PII to analytic
   await submit(page).click();
   await expect(dialog(page).getByRole('heading', { name: 'Thank you for signing up.' })).toBeFocused();
   expect(backend.requests).toEqual([
-    { step: 1, email: 'person@example.com', page: 'learner', src: 'signup-test', honeypot: '' },
     { step: 2, email: 'person@example.com', page: 'learner', src: 'signup-test', honeypot: '', role: 'Researcher', anything_else: 'Private feedback' },
   ]);
   expect(await events(page)).toEqual([
     ['event', 'popup_open', { trigger: 'hero', page: 'learner', src: 'signup-test' }],
-    ['event', 'signup_step1', { page: 'learner', src: 'signup-test' }],
     ['event', 'signup_step2', { page: 'learner', src: 'signup-test' }],
   ]);
   await dialog(page).getByRole('button', { name: 'Close', exact: true }).click();
-  await expect(page.locator('main')).toBeFocused();
-  // The success line must still be visible once the popup is closed.
-  await expect(hero.getByRole('status')).toBeVisible();
-  await expect(hero.getByRole('status')).toHaveText('You have been signed up for early access.');
-  await topbar(page).click();
+  await expect(invoker(page)).toBeFocused();
+  await openDialog(page);
   await expect(email(page)).toHaveValue('');
   await expect(email(page)).toBeFocused();
   await expect(dialog(page).getByLabel('Role', { exact: true })).toHaveValue('');
@@ -84,59 +78,32 @@ test('hero success saves both steps, preserves context, sends no PII to analytic
   expect(await context.cookies()).toEqual([]);
 });
 
-test('hero failure still opens the popup and allows the second step to save', async ({ page, backend }) => {
-  backend.respond = (body) => body.step === 1 ? { ok: false, error: 'server' } : { ok: true };
+test('popup opens an empty form, Esc returns focus and Tab stays in the modal', async ({ page, backend }) => {
   await visit(page);
-  const hero = page.locator('[data-hero-signup]');
-  await hero.getByRole('textbox', { name: 'Email' }).fill('person@example.com');
-  await hero.getByRole('button').click();
-  await expect(email(page)).toHaveValue('person@example.com');
-  await expect(hero.getByRole('status')).toHaveCount(0);
-  await expect(hero.getByRole('button')).toBeEnabled();
-  await expect(hero.getByRole('button')).toHaveText('Get early access');
-  await submit(page).click();
-  await expect(dialog(page).getByRole('heading', { name: 'Thank you for signing up.' })).toBeVisible();
-  expect(backend.requests.map(({ step }) => step)).toEqual([1, 2]);
-  expect((await events(page)).map((item) => item[1])).toEqual(['popup_open', 'signup_step2']);
-  // Hero stays in sync with the dialog: step 2 success replaces the failed state.
-  await expect(hero.getByRole('status')).toHaveText('You have been signed up for early access.');
-  await expect(hero.getByRole('button')).toHaveCount(0);
+  await openDialog(page);
+  await expect(email(page)).toBeFocused();
+  await expect(email(page)).toHaveValue('');
+  await expect(page.locator('body')).toHaveCSS('overflow', 'hidden');
+  // Traverse more controls than exist, in both directions, including the wrap boundaries.
+  for (const key of ['Tab', 'Shift+Tab']) {
+    for (let count = 0; count < 12; count++) {
+      await page.keyboard.press(key);
+      const focus = await dialog(page).evaluate((element) => ({ inside: element.contains(document.activeElement), active: document.activeElement?.tagName }));
+      expect(focus.inside, `${key} ${count}: active element ${focus.active}`).toBe(true);
+    }
+  }
+  await page.keyboard.press('Escape');
+  await expect(dialog(page)).not.toBeVisible();
+  await expect(invoker(page)).toBeFocused();
+  await expect(page.locator('body')).not.toHaveCSS('overflow', 'hidden');
+  expect(backend.requests).toEqual([]);
+  expect(await events(page)).toEqual([['event', 'popup_open', { trigger: 'topbar', page: 'learner', src: 'signup-test' }]]);
 });
 
-for (const trigger of ['topbar', 'team']) {
-  test(`${trigger} CTA opens an empty form, Esc returns focus and Tab stays in the modal`, async ({ page, backend }) => {
-    await visit(page);
-    const invoker = page.locator(`[data-open-popup][data-trigger="${trigger}"]`);
-    await invoker.click();
-    await expect(email(page)).toBeFocused();
-    await expect(email(page)).toHaveValue('');
-    await expect(page.locator('body')).toHaveCSS('overflow', 'hidden');
-    // Traverse more controls than exist, in both directions, including the wrap boundaries.
-    for (const key of ['Tab', 'Shift+Tab']) {
-      for (let count = 0; count < 12; count++) {
-        await page.keyboard.press(key);
-        const focus = await dialog(page).evaluate((element) => ({ inside: element.contains(document.activeElement), active: document.activeElement?.tagName }));
-        expect(focus.inside, `${key} ${count}: active element ${focus.active}`).toBe(true);
-      }
-    }
-    await page.keyboard.press('Escape');
-    await expect(dialog(page)).not.toBeVisible();
-    await expect(invoker).toBeFocused();
-    await expect(page.locator('body')).not.toHaveCSS('overflow', 'hidden');
-    expect(backend.requests).toEqual([]);
-    expect(await events(page)).toEqual([['event', 'popup_open', { trigger, page: 'learner', src: 'signup-test' }]]);
-  });
-}
-
 for (const invalid of ['', 'not-an-email', '=person@example.com']) {
-  test(`invalid email ${JSON.stringify(invalid)} stays local in hero and popup`, async ({ page, backend }) => {
+  test(`invalid email ${JSON.stringify(invalid)} stays local in the popup`, async ({ page, backend }) => {
     await visit(page);
-    const hero = page.locator('[data-hero-signup]');
-    await hero.getByRole('textbox', { name: 'Email' }).fill(invalid);
-    await hero.getByRole('button').click();
-    await expect(hero.locator('[data-email-error]')).toHaveText('Enter a valid email address.');
-    await expect(dialog(page)).not.toBeVisible();
-    await topbar(page).click();
+    await openDialog(page);
     await email(page).fill(invalid);
     await submit(page).click();
     await expect(email(page)).toHaveAttribute('aria-invalid', 'true');
@@ -149,7 +116,7 @@ for (const invalid of ['', 'not-an-email', '=person@example.com']) {
 test('server failure retains answers and offers mailto, while invalid_email points to the email field', async ({ page, backend }) => {
   backend.respond = () => ({ ok: false, error: 'server' });
   await visit(page);
-  await topbar(page).click();
+  await openDialog(page);
   await email(page).fill('person@example.com');
   await dialog(page).getByLabel('Anything else').fill('Keep my answer');
   await submit(page).click();
@@ -167,73 +134,19 @@ test('server failure retains answers and offers mailto, while invalid_email poin
   expect((await events(page)).map((item) => item[1])).toEqual(['popup_open']);
 });
 
-test('each form sends one request while busy, including repeated Enter', async ({ page, backend }) => {
-  const heroPending = deferredReply();
+test('the popup sends one request while busy, including repeated Enter', async ({ page, backend }) => {
   const popupPending = deferredReply();
-  backend.respond = (body) => body.step === 1 ? heroPending.promise : popupPending.promise;
+  backend.respond = () => popupPending.promise;
   await visit(page);
-  const hero = page.locator('[data-hero-signup]');
-  const heroEmail = hero.getByRole('textbox', { name: 'Email' });
-  await heroEmail.fill('person@example.com');
-  await heroEmail.press('Enter');
-  await expect(hero).toHaveAttribute('aria-busy', 'true');
-  await heroEmail.press('Enter');
-  await expect(hero.getByRole('button')).toBeDisabled();
-  await expect(hero.getByRole('button', { name: 'Submitting' })).toBeDisabled();
-  expect(backend.requests).toHaveLength(1);
-  // The popup is already open while step 1 is still pending.
-  await expect(email(page)).toHaveValue('person@example.com');
-  heroPending.resolve({ ok: true });
-  await expect(hero.getByRole('status')).toBeVisible();
+  await openDialog(page, 'person@example.com');
   await submit(page).click();
   await expect(dialog(page).getByRole('button', { name: 'Submitting' })).toBeDisabled();
   await email(page).press('Enter');
   await expect(dialog(page).locator('form')).toHaveAttribute('aria-busy', 'true');
-  expect(backend.requests).toHaveLength(2);
+  expect(backend.requests).toHaveLength(1);
   popupPending.resolve({ ok: true });
   await expect(dialog(page).getByRole('heading', { name: 'Thank you for signing up.' })).toBeVisible();
-  expect(backend.requests).toHaveLength(2);
-});
-
-test('late hero response preserves answers and a queued step 2 save in the open popup', async ({ page, backend }) => {
-  const heroPending = deferredReply();
-  const popupPending = deferredReply();
-  backend.respond = (body) => body.step === 1 ? heroPending.promise : popupPending.promise;
-  await visit(page);
-  const hero = page.locator('[data-hero-signup]');
-  await hero.getByRole('textbox', { name: 'Email' }).fill('hero@example.com');
-  await hero.getByRole('button').click();
-  await expect.poll(() => backend.requests.length).toBe(1);
-  // The hero popup is already open (modal) while step 1 is pending.
-  await email(page).fill('popup@example.com');
-  await dialog(page).getByLabel('Role', { exact: true }).selectOption('Researcher');
-  const answer = dialog(page).getByLabel('Anything else');
-  await answer.fill('Keep my answers');
-  await submit(page).click();
-  await expect(dialog(page).getByRole('button', { name: 'Submitting' })).toBeDisabled();
-  // Step 2 waits for step 1 so the Sheet sees them in order.
   expect(backend.requests).toHaveLength(1);
-  await answer.focus();
-
-  heroPending.resolve({ ok: true });
-  await expect.poll(() => backend.requests.length).toBe(2);
-
-  await expect(hero.getByRole('status')).toBeAttached();
-  await expect(email(page)).toHaveValue('popup@example.com');
-  await expect(dialog(page).getByLabel('Role', { exact: true })).toHaveValue('Researcher');
-  await expect(answer).toHaveValue('Keep my answers');
-  await expect(answer).toBeFocused();
-  await expect(dialog(page).getByRole('button', { name: 'Submitting' })).toBeDisabled();
-  await expect(dialog(page).locator('form')).toHaveAttribute('aria-busy', 'true');
-  await email(page).press('Enter');
-  expect(backend.requests).toHaveLength(2);
-  popupPending.resolve({ ok: true });
-  await expect(dialog(page).getByRole('heading', { name: 'Thank you for signing up.' })).toBeFocused();
-  expect(backend.requests[1]).toMatchObject({ step: 2, email: 'popup@example.com', role: 'Researcher', anything_else: 'Keep my answers' });
-  expect((await events(page)).map((item) => item[1])).toEqual(['popup_open', 'signup_step1', 'signup_step2']);
-  await dialog(page).getByRole('button', { name: 'Close', exact: true }).click();
-  // The hero button that opened the popup was replaced by the success line, so focus falls back to main.
-  await expect(page.locator('main')).toBeFocused();
 });
 
 test('enterprise renders its fields, submits page context and keeps honeypots inert', async ({ page, backend }) => {
@@ -242,7 +155,7 @@ test('enterprise renders its fields, submits page context and keeps honeypots in
     await expect(honeypot).toHaveAttribute('tabindex', '-1');
     expect(await honeypot.evaluate((element) => Boolean(element.closest('[inert][aria-hidden="true"]')))).toBe(true);
   }
-  await topbar(page).click();
+  await openDialog(page);
   await expect(dialog(page).locator('[name="how_often"]')).toHaveCount(0);
   await expect(dialog(page).getByLabel('Organization', { exact: true })).toBeVisible();
   await expect(dialog(page).getByLabel('Number of coders or learners')).toBeVisible();
@@ -260,7 +173,7 @@ test('enterprise renders its fields, submits page context and keeps honeypots in
 
 test('dialog fits the viewport and keeps its header and submit visible while the fields scroll', async ({ page, isMobile }) => {
   await visit(page, '/enterprise');
-  await topbar(page).click();
+  await openDialog(page);
   const bounds = await dialog(page).boundingBox();
   const viewport = page.viewportSize()!;
   expect(bounds).not.toBeNull();
@@ -284,12 +197,12 @@ test('closing a pending save and reopening ignores the old response', async ({ p
   const pending = deferredReply();
   backend.respond = () => pending.promise;
   await visit(page);
-  await topbar(page).click();
+  await openDialog(page);
   await email(page).fill('old@example.com');
   await submit(page).click();
   await expect.poll(() => backend.requests.length).toBe(1);
   await dialog(page).getByRole('button', { name: 'Close', exact: true }).click();
-  await topbar(page).click();
+  await openDialog(page);
   await email(page).fill('new@example.com');
   // Waiting for the intercepted response ensures the old request actually settled.
   const settled = page.waitForResponse((response) => new URL(response.url()).hostname === 'script.google.com');

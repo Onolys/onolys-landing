@@ -1,4 +1,5 @@
 import { expect, test as base, type Locator, type Page } from '@playwright/test';
+import { openPopup } from './open-popup';
 
 type Payload = { step: number; page: string; [key: string]: unknown };
 const test = base.extend<{ signupRequests: Payload[] }>({
@@ -39,8 +40,8 @@ test('enterprise sections, exact copy, comparison and trailing CTAs are complete
   await expect(page.locator('#hero')).toContainText("We read each coded sample against its transcript and flag the scores the session doesn't support, with line references.");
   await expect(page.locator('#hero')).not.toContainText('not official MITI coding');
   await expect(page.locator('.hero-limits')).toHaveCount(0);
-  await expect(page.locator('#hero [data-hero-signup]')).toHaveCount(1);
-  await expect(page.locator('#hero [data-open-popup]')).toHaveCount(0);
+  await expect(page.locator('#hero [data-hero-signup]')).toHaveCount(0);
+  await expect(page.locator('#hero a[data-app-link][data-trigger="hero"]')).toHaveText('Try it out');
   await expect(page.locator('#benefits article h3')).toHaveText(['Bulk evaluations', 'Quality control', 'Fast turnaround']);
   await expect(page.locator('#benefits article p')).toHaveText([
     'Volume pricing for evaluating many samples across your team or program.',
@@ -60,18 +61,21 @@ test('enterprise sections, exact copy, comparison and trailing CTAs are complete
   await expect(table.locator('tbody [data-value]')).toHaveText(['Yes', 'Yes', 'Sometimes', 'Yes, linked lines', 'Days', 'Minutes', 'Needs more coders', 'Yes']);
   await expect(table.locator('tbody td[data-highlighted="true"] strong')).toHaveCount(4);
   await expect(page.locator('#evaluates article').nth(2)).toContainText('Summary scores checked against MITI fair/good levels.');
-  for (const section of ['benefits', 'features', 'compare']) {
-    const cta = page.locator(`#${section} .cta-row > [data-open-popup]`);
+  for (const section of ['benefits', 'features', 'evaluates', 'compare']) {
+    const cta = page.locator(`#${section} .cta-row > a[data-app-link]`);
     await expect(cta).toHaveAttribute('data-trigger', `section:${section}`);
-    await cta.click();
-    const dialog = page.getByRole('dialog');
-    await expect(dialog).toBeVisible();
-    await expect(dialog.getByLabel('Organization', { exact: true })).toBeVisible();
-    await expect(dialog.getByLabel('Samples per month', { exact: true })).toBeVisible();
-    await expect(dialog.locator('[name="how_often"]')).toHaveCount(0);
-    await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(cta).toHaveText('Try it out');
+    await expect(cta).toHaveAttribute('href', /\/signup$/);
+    await expect(page.locator(`#${section} [data-open-popup]`)).toHaveCount(0);
   }
-  await expect(page.locator('#evaluates .cta-row > [data-trigger="section:evaluates"]')).toHaveCount(1);
+  // The kept dialog still renders the enterprise fields when opened through its event.
+  await openPopup(page, 'section:benefits');
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel('Organization', { exact: true })).toBeVisible();
+  await expect(dialog.getByLabel('Samples per month', { exact: true })).toBeVisible();
+  await expect(dialog.locator('[name="how_often"]')).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Close', exact: true }).click();
   expect(signupRequests).toEqual([]);
 });
 
@@ -106,7 +110,7 @@ test('enterprise feature tabs: order, static panels, keyboard and 1440x900 fit',
 
 test('enterprise CTA submits only the mocked step-2 enterprise context and fields', async ({ page, signupRequests }) => {
   await visit(page);
-  await page.locator('#benefits .cta-row > [data-open-popup]').click();
+  await openPopup(page, 'section:benefits');
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByLabel('Organization', { exact: true })).toBeVisible();
   await expect(dialog.getByLabel('Samples per month', { exact: true })).toBeVisible();
